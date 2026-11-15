@@ -1,0 +1,18 @@
+# Python caches & virtual environments
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# Auth secrets, cookies & env files
+.env
+.env.*
+storage_state.json
+*cookies*.json
+
+# OS / editor artifacts
+.DS_Store
+Thumbs.db
+*.tmp
+*.bak

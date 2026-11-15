@@ -1,0 +1,15 @@
+# Python >= 3.10 required (uses X | Y union type annotations)
+# Tested on Python 3.11.9 with:
+#   notebooklm-py==0.8.6, pymupdf==1.28.2, pymupdf4llm==1.28.2, python-docx==1.2.0
+
+# NotebookLM CLI & Python client (required by check_fulltext, export_md_figures, figure_probe, verify_outputs)
+notebooklm-py>=0.8.6
+
+# PDF inspection, page rendering, region cropping & in-place figure patching (pdf_prepare.py)
+pymupdf>=1.24.0
+
+# Intact composite vector/raster figure extraction (`pdf_prepare.py extract-figs`)
+pymupdf4llm>=0.0.17
+
+# Rebuilding OCR / transcribed Markdown + figures into clean DOCX (md2docx.py)
+python-docx>=1.1.0
