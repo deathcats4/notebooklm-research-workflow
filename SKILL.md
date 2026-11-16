@@ -68,9 +68,12 @@ This skill encodes a discipline-agnostic, research-first workflow for scientific
    - **Source Role (`primary` 一手实证 vs `review` 二手综述 vs `background` 背景对照)**: Explicitly record which sources contain **direct experimental/observational/benchmark data** on your target vs **secondary reviews/meta-analyses** or **background/analog literature**. Never mix secondary reviews with primary studies during parameter extraction or core claim synthesis—reviews monopolize `data-table` rows, inject off-target study subjects/populations, duplicate OnlineFirst vs print citations (`2019` vs `2020`), and seed stitched secondary-citation hallucinations and circular evidence (`1` primary study counted `N` times) in `report`.
    - **Table caveat**: Both embedded data tables inside `source fulltext` (flattened line-by-line, bilingual headers interleaved) and `markdown` tables (often noisy figure-plate OCR) lose grid fidelity. Never rely on NotebookLM-parsed tables for publication-grade numbers—have your local Agent extract key tables directly from the original PDFs.
 
-## Step 3: Repair Broken PDFs & Chopped Vector Figures -> DOCX
+## Step 3: Repair Broken PDFs & Chopped Vector Figures -> DOCX (Text/Tables) + Raster PDF (Figures)
 
-**Why DOCX**: Uploading raw OCR `.md` alone drops relative `![](images/...)` links; printing HTML to PDF via Chromium leaks font-name tokens into extracted text. Rebuilding into `.docx` via `scripts/md2docx.py` (which handles `#` headings, HTML `<table>` and Markdown pipe tables, strips LaTeX `$...$`/`$$...$$` wrappers cleanly, and embeds `![alt](path)` / titled image links) preserves 100% of text with zero font noise while keeping all figures readable by NotebookLM's multimodal vision.
+**Why DOCX for text/tables vs. Raster PDF for figures**:
+- Uploading raw OCR `.md` alone drops relative `![](images/...)` links; printing HTML to PDF via Chromium leaks font-name tokens (`MicrosoftYaHei`) into extracted text.
+- Rebuilding transcribed text & tables into `.docx` via `scripts/md2docx.py` (which handles `#` headings, HTML `<table>` and Markdown pipe tables, strips LaTeX `$...$`/`$$...$$` wrappers cleanly) preserves 100% of prose and digits with zero font noise.
+- **Verified DOCX vision caveat**: NotebookLM's visual pixel indexing of images embedded inside `.docx` is unreliable (verified via `figure_probe.py`: `.png`-embedded `.docx` files exposed only text captions and failed figure-only queries, and `source fulltext --format markdown` returns `0` figures for `.docx`). Therefore, **pack figures that must be read visually into a clean PyMuPDF raster PDF** (`pdf_prepare.py pack-figs-pdf`), which uses Unicode/ToUnicode headers (`0` CJK font-encoding errors, no Chromium font-name leakage) and triggers NotebookLM's native PDF page vision reliably.
 
 First diagnose the local PDF on CPU (`pymupdf` + `pymupdf4llm`):
 ```bash
@@ -78,15 +81,15 @@ python scripts/pdf_prepare.py inspect <paper.pdf>
 ```
 
 - **Step 3A — Clean text, only vector figures chopped (conserve the 50-source limit)**:
-  - Do **not** rebuild the whole paper or upload one `.png` per figure (standalone images lack paper context and waste source slots).
+  - Do **not** rebuild the whole paper or upload one `.png` per figure (standalone images lack paper context and waste source slots), and do **not** pack supplement figures into `.docx` (risks zero visual pixel indexing).
   - Extract intact composite PNGs (with overlaid vector labels/legends preserved) via `pymupdf4llm`, or crop a normalized bounding box directly:
     ```bash
     python scripts/pdf_prepare.py extract-figs <paper.pdf> -p <PAGES> -o <WORK_DIR> --label "Author (Year) Title" --append-md <WORK_DIR>/missing_figures.md
     python scripts/pdf_prepare.py crop <paper.pdf> -p <PAGE> --rect x0,y0,x1,y1 -o <WORK_DIR>/figs/fig.png
     ```
-  - Review/trim unwanted images in `missing_figures.md` (add exact figure numbers and captions above each image), then pack **all missing figures across the notebook into one single `.docx`** (`+1` source slot total, recommended default):
+  - Review/trim unwanted images in `missing_figures.md` (add exact figure numbers and captions above each image), then pack **all missing figures across the notebook into one single clean raster PDF** (`+1` source slot total, recommended default):
     ```bash
-    python scripts/md2docx.py <WORK_DIR>/missing_figures.md <WORK_DIR>/缺失图表补充.docx
+    python scripts/pdf_prepare.py pack-figs-pdf <WORK_DIR>/missing_figures.md -o <WORK_DIR>/缺失图件补充.pdf
     ```
   - **Optional single-source in-place patch (`patch-fig`)**: When strict source limits (`+0` net slots) or keeping text and figures inside one source ID is required and figure margins are cleanly separable from surrounding text, visually measure normalized `0..1` boxes from `render-pages` output and flatten only those regions in a patched PDF copy (strips chart-internal text inside the box unless `--keep-text` is passed):
     ```bash
@@ -99,15 +102,13 @@ python scripts/pdf_prepare.py inspect <paper.pdf>
     ```bash
     python scripts/pdf_prepare.py render-pages <paper.pdf> -o <WORK_DIR> --dpi 180
     ```
-  - Read the rendered `pages/page_*.png` files directly with multimodal vision, transcribe clean Markdown (headings + pipe/HTML tables), extract/crop figures (`extract-figs` or `crop`), build `<output.docx>` via `scripts/md2docx.py`, upload and delete the broken PDF (`0` net source slots).
+  - Read the rendered `pages/page_*.png` files directly with multimodal vision, transcribe clean Markdown (headings + pipe/HTML tables), build `<output.docx>` via `scripts/md2docx.py`, upload and delete the broken PDF (`0` net source slots).
+  - If the scanned paper contains key figures/profiles/diagrams that NotebookLM `ask` must inspect visually, crop them (`crop`) and append them to `<WORK_DIR>/missing_figures.md` -> `pack-figs-pdf` (so text/tables live losslessly in `.docx` while figures live reliably in the raster supplement PDF).
 
 - **Step 3C — Large scanned batches (100+ pages) or external OCR outputs**:
-  - When batch OCR outputs (e.g., Docling, `rapidocr-onnxruntime`, or MinerU) are available (`<ocr_markdown.md>` + `images/`), run:
-    ```bash
-    python scripts/md2docx.py <ocr_markdown.md> <output.docx> [images_base_dir]
-    ```
+  - When batch OCR outputs (e.g., Docling, `rapidocr-onnxruntime`, or MinerU) are available (`<ocr_markdown.md>` + `images/`), run `scripts/md2docx.py <ocr_markdown.md> <output.docx> [images_base_dir]` for lossless text/tables, and route any figures requiring visual `ask` inspection through `pack-figs-pdf`.
 
-After uploading any repaired `.docx` or patched PDF, wait for `ready`, re-verify text via `check_fulltext.py` (e.g. `--only <ID_OR_TITLE>`) and `export_md_figures.py`, and run a visual plant-token probe on values visible **only inside a figure** (checks `source fulltext` has 0 leaks before running `ask -s`, with 1 automatic retry on transient `UNEXPECTED_ERROR`):
+After uploading any repaired `.docx`, raster supplement PDF, or patched PDF, wait for `ready`, re-verify text via `check_fulltext.py` (e.g. `--only <ID_OR_TITLE>`) and `export_md_figures.py`, and run a visual plant-token probe on values visible **only inside a figure** (checks `source fulltext` has 0 leaks before running `ask -s`, with 1 automatic retry on transient `UNEXPECTED_ERROR`):
 ```bash
 python scripts/figure_probe.py -n <NOTEBOOK_ID> -s <SOURCE_ID> -q "<图件专属数字/坐标问题>" --expect "<TOK1>" --expect "<TOK2>" [--strict --save probe.json]
 ```

@@ -2,20 +2,22 @@
 """Lightweight PDF inspection, page rendering, and figure recovery.
 
 Uses `pymupdf` (and `pymupdf4llm` for intact vector-figure extraction) so an
-agent can diagnose broken/scanned/vector-heavy PDFs and produce clean inputs
-for `md2docx.py` on CPU with minimal dependencies.
+agent can diagnose broken/scanned/vector-heavy PDFs, repair figures into clean
+raster PDFs, and prepare clean inputs for `md2docx.py` on CPU with minimal deps.
 
 Subcommands:
-    inspect      Diagnose text layer, full-page scans, and vector-heavy pages
-    render-pages Render pages to crisp PNGs (+ raw text dump) for visual reading
-    extract-figs Extract intact composite figure PNGs via pymupdf4llm (+ stub md)
-    crop         Crop a normalized [x0,y0,x1,y1] region of a PDF page at high DPI
-    patch-fig    Flatten specific normalized figure regions in-place in a PDF copy
+    inspect       Diagnose text layer, full-page scans, and vector-heavy pages
+    render-pages  Render pages to crisp PNGs (+ raw text dump) for visual reading
+    extract-figs  Extract intact composite figure PNGs via pymupdf4llm (+ stub md)
+    crop          Crop a normalized [x0,y0,x1,y1] region of a PDF page at high DPI
+    patch-fig     Flatten specific normalized figure regions in-place in a PDF copy
+    pack-figs-pdf Pack extracted/cropped figure images (+ optional stub md) into a clean PDF
 """
 
 from __future__ import annotations
 
 import argparse
+import html as htmlmod
 import json
 import os
 import re
@@ -25,7 +27,8 @@ import pymupdf
 
 CJK_RE = re.compile(r"[\u4e00-\u9fff]")
 CTRL_RE = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f]")
-IMG_LINK_RE = re.compile(r"!\[[^\]]*\]\(([^)]+)\)")
+IMG_LINK_RE = re.compile(r"!\[([^\]]*)\]\(([^)]+)\)")
+IMG_TITLE_RE = re.compile(r"""\s+(?:"[^"]*"|'[^']*')\s*$""")
 LEGACY_CJK_CMAP_PREFIXES = (
     "GBK",
     "GB-",
@@ -272,7 +275,7 @@ def extract_figs(
     seen: set[str] = set()
     rel_imgs: list[str] = []
     for match in IMG_LINK_RE.finditer(md_text):
-        raw_img = match.group(1).strip()
+        raw_img = match.group(2).strip()
         abs_img = raw_img if os.path.isabs(raw_img) else os.path.abspath(raw_img)
         if not os.path.exists(abs_img) or abs_img in seen:
             continue
@@ -429,6 +432,110 @@ def patch_figures(
     }
 
 
+def _collect_md_figure_items(md_path: str, img_base: str | None) -> tuple[list[tuple[str, str, str]], list[str]]:
+    """Collect `(paper_label, caption, abs_img_path)` entries from a figures Markdown file."""
+    base_dir = os.path.abspath(img_base) if img_base else os.path.dirname(os.path.abspath(md_path))
+    items: list[tuple[str, str, str]] = []
+    missing: list[str] = []
+    paper_label = ""
+    caption = ""
+
+    with open(md_path, encoding="utf-8-sig") as f:
+        for raw in f:
+            line = raw.strip()
+            if not line:
+                continue
+            if line.startswith("## "):
+                paper_label = line[3:].strip()
+                caption = ""
+                continue
+            if line.startswith("### "):
+                caption = line[4:].strip()
+                continue
+            m = IMG_LINK_RE.match(line)
+            if m:
+                alt = m.group(1).strip()
+                raw_target = IMG_TITLE_RE.sub("", m.group(2).strip()).strip().strip("<>")
+                img_path = raw_target if os.path.isabs(raw_target) else os.path.abspath(os.path.join(base_dir, raw_target))
+                if not os.path.exists(img_path):
+                    missing.append(raw_target)
+                    continue
+                items.append((paper_label, caption or alt, img_path))
+                caption = ""
+                continue
+            if not line.startswith("#"):
+                caption = f"{caption} {line}".strip() if caption else line
+
+    return items, missing
+
+
+def pack_figs_pdf(inputs: list[str], out_pdf: str, img_base: str | None = None) -> dict:
+    """Pack figure images (or a Markdown figure manifest) into a clean raster supplement PDF.
+
+    Uses PyMuPDF `insert_htmlbox` for Unicode/CJK-safe headers (avoiding legacy CJK
+    CMaps and Chromium font-name leakage) so NotebookLM indexes every figure visually.
+    """
+    items: list[tuple[str, str, str]] = []
+    missing: list[str] = []
+    for entry in inputs:
+        if entry.lower().endswith(".md"):
+            md_items, md_missing = _collect_md_figure_items(entry, img_base)
+            items.extend(md_items)
+            missing.extend(md_missing)
+        elif os.path.exists(entry):
+            items.append(("", os.path.splitext(os.path.basename(entry))[0], os.path.abspath(entry)))
+        else:
+            missing.append(entry)
+
+    if not items:
+        raise FileNotFoundError(f"No valid images found to pack into PDF (missing: {missing})")
+
+    doc = pymupdf.open()
+    margin = 28.0
+    page_w = 595.0
+    content_w = page_w - 2 * margin
+    packed: list[dict] = []
+
+    for paper_label, caption, img_path in items:
+        pix = pymupdf.Pixmap(img_path)
+        w, h = pix.width, pix.height
+        scale = min(content_w / max(w, 1), 700.0 / max(h, 1))
+        img_w, img_h = w * scale, h * scale
+
+        header_parts = []
+        if paper_label:
+            header_parts.append(f"<div style='font-size:9.5pt;color:#444;'>{htmlmod.escape(paper_label)}</div>")
+        if caption:
+            header_parts.append(f"<div style='font-size:10.5pt;font-weight:bold;margin-top:2px;'>{htmlmod.escape(caption)}</div>")
+        header_html = "".join(header_parts)
+        header_h = 54.0 if (paper_label and caption) else (34.0 if header_parts else 0.0)
+        if len(paper_label) + len(caption) > 110:
+            header_h += 18.0
+
+        page_h = max(320.0, margin + header_h + img_h + margin)
+        page = doc.new_page(width=page_w, height=page_h)
+        y_img = margin
+        if header_html:
+            page.insert_htmlbox(pymupdf.Rect(margin, margin, page_w - margin, margin + header_h), header_html)
+            y_img = margin + header_h + 6.0
+
+        x_img = margin + max(0.0, (content_w - img_w) / 2.0)
+        page.insert_image(pymupdf.Rect(x_img, y_img, x_img + img_w, y_img + img_h), filename=img_path)
+        packed.append({"paper": paper_label, "caption": caption, "image": img_path, "width": w, "height": h})
+
+    out_abs = os.path.abspath(out_pdf)
+    os.makedirs(os.path.dirname(out_abs), exist_ok=True)
+    doc.save(out_abs, garbage=4, deflate=True)
+    doc.close()
+
+    return {
+        "out": out_abs,
+        "pages": len(packed),
+        "missing_images": missing,
+        "packed": packed,
+    }
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Lightweight PyMuPDF/pymupdf4llm PDF prep tools.")
     sub = parser.add_subparsers(dest="cmd", required=True)
@@ -478,6 +585,14 @@ def main() -> int:
         action="store_true",
         help="Retain text layer inside patched boxes instead of stripping chart labels",
     )
+
+    p_pack = sub.add_parser(
+        "pack-figs-pdf",
+        help="Pack a figures Markdown manifest (or image paths) into a clean raster PDF.",
+    )
+    p_pack.add_argument("inputs", nargs="+", help="Markdown file (e.g. missing_figures.md) or image paths")
+    p_pack.add_argument("-o", "--out", required=True, help="Output supplement PDF path")
+    p_pack.add_argument("--img-base", default="", help="Base directory for relative image paths in Markdown")
 
     args = parser.parse_args()
 
@@ -536,6 +651,11 @@ def main() -> int:
         if not regions:
             parser.error("Provide --region PAGE:x0,y0,x1,y1 or -p/--page with --rect.")
         res = patch_figures(args.pdf, regions, args.out, args.dpi, args.keep_text)
+        print(json.dumps(res, ensure_ascii=False, indent=2))
+        return 0
+
+    if args.cmd == "pack-figs-pdf":
+        res = pack_figs_pdf(args.inputs, args.out, args.img_base or None)
         print(json.dumps(res, ensure_ascii=False, indent=2))
         return 0
 

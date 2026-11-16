@@ -22,7 +22,7 @@ notebooklm-research-workflow/
 │   ├── research-prompts.md     # 5 套跨学科科研人设与隔离核查提示词模板
 │   └── budget-tiers.md         # 按严谨度分级的工具路由与额度参考
 └── scripts/
-    ├── pdf_prepare.py          # 本地 PDF 预检、切页、框选裁图与原位补图
+    ├── pdf_prepare.py          # 本地 PDF 预检、切页、框选裁图、原位补图与图件打包 PDF
     ├── check_fulltext.py       # NotebookLM 入库全文脚本/噪声/数字密度审计
     ├── export_md_figures.py    # 导出 NotebookLM Markdown 与实际识别到的图件切片
     ├── md2docx.py              # 将 OCR Markdown + 插图重建为干净的 DOCX
