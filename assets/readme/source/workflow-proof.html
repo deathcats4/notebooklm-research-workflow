@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    width: 1200px;
+    height: 600px;
+    overflow: hidden;
+    background: transparent;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .plate {
+    width: 1200px;
+    height: 600px;
+    background: #FAF8F3;
+    border: 1.5px solid #DDD6C8;
+    border-radius: 18px;
+    padding: 32px 48px 34px 48px;
+    display: flex;
+    flex-direction: column;
+    font-family: "Noto Sans SC", "Noto Sans", sans-serif;
+    color: #1A1917;
+  }
+
+  /* Journal Figure Plate Header */
+  .plate-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    border-bottom: 1.5px solid #1A1917;
+    padding-bottom: 10px;
+    margin-bottom: 24px;
+  }
+  .plate-title {
+    font-family: "Noto Serif SC", "Noto Serif", Georgia, serif;
+    font-size: 24px;
+    font-weight: 700;
+    color: #1A1917;
+  }
+  .plate-sub {
+    font-size: 14.5px;
+    color: #6B655B;
+  }
+
+  /* Two editorial panels divided by thin vertical rule */
+  .panels {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 470px 1fr;
+    gap: 36px;
+  }
+
+  .panel-a {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding-right: 36px;
+    border-right: 1px solid #D8D2C5;
+  }
+
+  .panel-label {
+    font-family: "Cascadia Mono", monospace;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    color: #6B655B;
+    text-transform: uppercase;
+    margin-bottom: 14px;
+  }
+
+  .engine-block {
+    background: #FFFFFF;
+    border: 1px solid #DFD8CA;
+    border-top: 3px solid #146356;
+    padding: 16px 20px;
+    margin-bottom: 14px;
+  }
+  .engine-block.local {
+    border-top-color: #1A1917;
+    background: #F3EFE6;
+    margin-bottom: 0;
+  }
+  .engine-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 8px;
+  }
+  .engine-name {
+    font-family: "Noto Serif SC", serif;
+    font-size: 19px;
+    font-weight: 700;
+    color: #1A1917;
+  }
+  .engine-scope {
+    font-family: "Cascadia Mono", monospace;
+    font-size: 13px;
+    font-weight: 600;
+    color: #146356;
+  }
+  .engine-block.local .engine-scope {
+    color: #9A5B13;
+  }
+  .engine-list {
+    list-style: none;
+    font-size: 15px;
+    line-height: 1.68;
+    color: #423E38;
+  }
+  .engine-list li::before {
+    content: "— ";
+    color: #9B9488;
+  }
+
+  .mode0-strip {
+    margin-top: 14px;
+    padding: 10px 14px;
+    border-left: 3px solid #9A5B13;
+    background: #FBF5E8;
+    font-size: 14px;
+    line-height: 1.5;
+    color: #5C441E;
+  }
+  .mode0-strip strong {
+    color: #7D460B;
+    font-weight: 600;
+  }
+
+  /* Panel B: Three-Stage Audit Ledger */
+  .panel-b {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+
+  .gate-ledger {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .gate-row {
+    display: grid;
+    grid-template-columns: 62px 1fr;
+    gap: 16px;
+    padding: 14px 0;
+    border-bottom: 1px solid #DDD6C8;
+    align-items: start;
+  }
+  .gate-row:first-child {
+    padding-top: 4px;
+  }
+  .gate-row:last-child {
+    border-bottom: none;
+    padding-bottom: 10px;
+  }
+
+  .gate-num {
+    font-family: "Noto Serif", Georgia, serif;
+    font-size: 32px;
+    font-weight: 700;
+    line-height: 1;
+    color: #1A1917;
+    padding-top: 2px;
+  }
+  .gate-num.red { color: #C0291D; }
+  .gate-num.ochre { color: #9A5B13; }
+  .gate-num.teal { color: #146356; }
+
+  .gate-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 5px;
+  }
+  .gate-title {
+    font-family: "Noto Serif SC", serif;
+    font-size: 19px;
+    font-weight: 700;
+    color: #1A1917;
+  }
+  .gate-scripts {
+    font-family: "Cascadia Mono", monospace;
+    font-size: 13px;
+    color: #6B655B;
+  }
+  .gate-desc {
+    font-size: 15px;
+    line-height: 1.58;
+    color: #4B463F;
+  }
+
+  /* Bottom 3-Tier Honesty Stratification Bar */
+  .honesty-bar {
+    border-top: 1.5px solid #1A1917;
+    padding-top: 14px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+  }
+  .tier {
+    background: #FFFFFF;
+    border: 1px solid #DFD8CA;
+    padding: 10px 13px;
+  }
+  .tier-head {
+    font-family: "Cascadia Mono", monospace;
+    font-size: 13px;
+    font-weight: 700;
+    margin-bottom: 3px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .dot {
+    width: 8px;
+    height: 8px;
+    display: inline-block;
+  }
+  .tier-text {
+    font-size: 13.5px;
+    color: #555048;
+  }
+</style>
+</head>
+<body>
+  <div class="plate">
+    <div class="plate-head">
+      <div class="plate-title">双引擎按任务分流与三层审稿门禁</div>
+      <div class="plate-sub">不强迫 NotebookLM 当严格数据库 · 所有草稿过机审后再分层交付</div>
+    </div>
+
+    <div class="panels">
+      <!-- Panel A: Dual Engine Routing -->
+      <section class="panel-a">
+        <div>
+          <div class="panel-label">A · 按任务体量与保密级别分流</div>
+
+          <div class="engine-block">
+            <div class="engine-head">
+              <div class="engine-name">NotebookLM 云端引擎</div>
+              <div class="engine-scope">15–50+ 篇公开文献</div>
+            </div>
+            <ul class="engine-list">
+              <li>长文献广度托管与专题聚类（label）</li>
+              <li>跨文献脉络、学派争议与 [N] 引文笔记</li>
+              <li>思维导图、PPT / 播客初稿与自测闪卡</li>
+            </ul>
+          </div>
+
+          <div class="engine-block local">
+            <div class="engine-head">
+              <div class="engine-name">本地 Agent 直读原 PDF</div>
+              <div class="engine-scope">1–8 篇核心 / 保密稿</div>
+            </div>
+            <ul class="engine-list">
+              <li>复杂跨页大表精确提数（p 值 / mean±SD）</li>
+              <li>绕过 data-table 吞号与压平错位风险</li>
+              <li>未发表手稿与涉密实验数据（物理不出本地）</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="mode0-strip">
+          <strong>可选 Mode 0 领域冷启动</strong>：独立建学习库，先抽 5 大思维模型与 3 大学派分歧，再用苏格拉底反问自测，不污染论文主库。
+        </div>
+      </section>
+
+      <!-- Panel B: Three Gates + Honest Stratification -->
+      <section class="panel-b">
+        <div>
+          <div class="panel-label">B · 进论文前的三道确定性审计门禁</div>
+
+          <div class="gate-ledger">
+            <div class="gate-row">
+              <div class="gate-num red">01</div>
+              <div>
+                <div class="gate-head">
+                  <div class="gate-title">入库体检与载体修复</div>
+                  <div class="gate-scripts">pdf_prepare · check_fulltext · md2docx</div>
+                </div>
+                <div class="gate-desc">拒信 status: ready，拦截缺汉字与静默丢数字 PDF；损坏正文重建无损 .docx，切碎矢量图打包为单份栅格补充 PDF 并做盲测探针。</div>
+              </div>
+            </div>
+
+            <div class="gate-row">
+              <div class="gate-num ochre">02</div>
+              <div>
+                <div class="gate-head">
+                  <div class="gate-title">来源物理隔离与专题分治</div>
+                  <div class="gate-scripts">zotero_triage · label · ask -s</div>
+                </div>
+                <div class="gate-desc">严格区分一手实证（primary）、二手综述（review）与背景对照；按专题 4–8 篇分批问答，配合 6 套科研人设与去综述二次转引打假。</div>
+              </div>
+            </div>
+
+            <div class="gate-row">
+              <div class="gate-num teal">03</div>
+              <div>
+                <div class="gate-head">
+                  <div class="gate-title">输出机审与原文溯源</div>
+                  <div class="gate-scripts">verify_outputs · scan / coverage / trace</div>
+                </div>
+                <div class="gate-desc">自动扫出区间吞号、综述垄断、跨行单位混用、0 引用静默漏引与限定词丢失（防确定性拔高），并在归一化全文中精确回溯原文偏移。</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Bottom 3-Tier Honesty Bar -->
+        <div class="honesty-bar">
+          <div class="tier">
+            <div class="tier-head" style="color:#146356;"><span class="dot" style="background:#146356;"></span>Primary-Verified</div>
+            <div class="tier-text">一手原文、单位与样本量已核</div>
+          </div>
+          <div class="tier">
+            <div class="tier-head" style="color:#9A5B13;"><span class="dot" style="background:#9A5B13;"></span>Corrected</div>
+            <div class="tier-text">已从全文纠偏并保留异常记录</div>
+          </div>
+          <div class="tier">
+            <div class="tier-head" style="color:#C0291D;"><span class="dot" style="background:#C0291D;"></span>Unverified</div>
+            <div class="tier-text">综述转引或标为待回原 PDF</div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+</body>
+</html>

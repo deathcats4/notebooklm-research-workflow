@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    width: 1200px;
+    height: 620px;
+    overflow: hidden;
+    background: transparent;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .sheet {
+    width: 1200px;
+    height: 620px;
+    background: #FAF8F3;
+    border: 1.5px solid #DDD6C8;
+    border-radius: 18px;
+    padding: 34px 48px 36px 48px;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    font-family: "Noto Sans SC", "Noto Sans", sans-serif;
+    color: #1A1917;
+  }
+
+  /* Editorial Journal Masthead */
+  .masthead {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #1A1917;
+    position: relative;
+  }
+  .masthead::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -6px;
+    height: 1px;
+    background: #1A1917;
+  }
+  .masthead-left {
+    font-family: "Cascadia Mono", "Cascadia Code", monospace;
+    font-size: 13.5px;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    color: #5C574F;
+    text-transform: uppercase;
+  }
+  .masthead-right {
+    font-family: "Cascadia Mono", "Cascadia Code", monospace;
+    font-size: 13.5px;
+    letter-spacing: 0.06em;
+    color: #6B655B;
+  }
+  .masthead-right strong {
+    color: #146356;
+    font-weight: 600;
+  }
+
+  /* Two-column print layout */
+  .body-grid {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 525px 1fr;
+    gap: 42px;
+    margin-top: 28px;
+    align-items: stretch;
+  }
+
+  /* Left: Editorial Title & Index */
+  .title-col {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding-top: 4px;
+  }
+
+  .kicker {
+    font-family: "Noto Serif SC", "Noto Serif", Georgia, serif;
+    font-size: 15px;
+    font-weight: 600;
+    color: #C0291D;
+    letter-spacing: 0.08em;
+    margin-bottom: 12px;
+  }
+
+  h1 {
+    font-family: "Noto Serif", "Georgia", "Noto Serif SC", serif;
+    font-size: 50px;
+    font-weight: 900;
+    line-height: 1.07;
+    letter-spacing: -0.025em;
+    color: #1A1917;
+    margin-bottom: 20px;
+  }
+  h1 .accent-line {
+    display: block;
+    font-weight: 700;
+    color: #146356;
+  }
+
+  .deck {
+    font-family: "Noto Serif SC", "Noto Serif", serif;
+    font-size: 24px;
+    font-weight: 700;
+    line-height: 1.42;
+    color: #1A1917;
+    margin-bottom: 14px;
+  }
+
+  .abstract {
+    font-family: "Noto Sans SC", "Noto Sans", sans-serif;
+    font-size: 17px;
+    font-weight: 400;
+    line-height: 1.65;
+    color: #555048;
+  }
+
+  /* Bottom 3-column typographic index (no pills) */
+  .index-strip {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    border-top: 1px solid #D4CCBD;
+    padding-top: 16px;
+    margin-top: 22px;
+  }
+  .idx-item {
+    padding-right: 14px;
+  }
+  .idx-item + .idx-item {
+    border-left: 1px solid #DDD6C8;
+    padding-left: 16px;
+  }
+  .idx-num {
+    font-family: "Noto Serif", Georgia, serif;
+    font-size: 14px;
+    font-weight: 700;
+    color: #C0291D;
+    margin-bottom: 3px;
+  }
+  .idx-name {
+    font-family: "Noto Sans SC", sans-serif;
+    font-size: 16px;
+    font-weight: 600;
+    color: #1A1917;
+    margin-bottom: 3px;
+  }
+  .idx-cmd {
+    font-family: "Cascadia Mono", monospace;
+    font-size: 13px;
+    color: #6B655B;
+  }
+
+  /* Right: Redlined Manuscript Proof Specimen */
+  .manuscript-wrap {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  .paper-card {
+    background: #FFFFFF;
+    border: 1px solid #D7D0C2;
+    box-shadow: 0 10px 28px rgba(26, 25, 23, 0.06);
+    padding: 22px 24px 20px 24px;
+    position: relative;
+  }
+
+  .paper-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    border-bottom: 1.5px solid #1A1917;
+    padding-bottom: 8px;
+    margin-bottom: 14px;
+  }
+  .paper-fig {
+    font-family: "Noto Serif", "Noto Serif SC", serif;
+    font-size: 15.5px;
+    font-weight: 700;
+    color: #1A1917;
+  }
+  .paper-tag {
+    font-family: "Cascadia Mono", monospace;
+    font-size: 12.5px;
+    color: #7A7368;
+  }
+
+  /* Manuscript rows with peer-review redline markup */
+  .audit-row {
+    padding: 11px 0;
+    border-bottom: 1px dashed #E4DDD0;
+    display: grid;
+    grid-template-columns: 218px 1fr;
+    gap: 14px;
+    align-items: center;
+  }
+  .audit-row:last-of-type {
+    border-bottom: none;
+    padding-bottom: 6px;
+  }
+
+  .raw-cell {
+    font-family: "Noto Sans SC", sans-serif;
+    font-size: 15px;
+    color: #3D3A35;
+    line-height: 1.45;
+  }
+  .raw-label {
+    font-family: "Cascadia Mono", monospace;
+    font-size: 12.5px;
+    color: #847D72;
+    display: block;
+    margin-bottom: 2px;
+  }
+
+  /* Redline visual marks */
+  .strike {
+    color: #9A2B22;
+    text-decoration: line-through;
+    text-decoration-color: #C0291D;
+    text-decoration-thickness: 2px;
+    font-family: "Cascadia Mono", monospace;
+    font-weight: 600;
+    background: #FDF0EE;
+    padding: 0 4px;
+  }
+  .circled {
+    display: inline-block;
+    font-family: "Cascadia Mono", monospace;
+    font-weight: 700;
+    color: #9A2B22;
+    padding: 1px 7px;
+    border: 2px solid #C0291D;
+    border-radius: 50% 44% 52% 46% / 48% 55% 45% 52%;
+    background: #FDF0EE;
+  }
+  .wavy {
+    font-family: "Cascadia Mono", monospace;
+    font-weight: 600;
+    color: #9A2B22;
+    text-decoration: underline wavy #C0291D;
+    text-underline-offset: 3px;
+    background: #FDF0EE;
+    padding: 0 3px;
+  }
+
+  .redline-note {
+    border-left: 2.5px solid #C0291D;
+    padding-left: 12px;
+  }
+  .redline-title {
+    font-family: "Noto Sans SC", sans-serif;
+    font-size: 14.5px;
+    font-weight: 600;
+    color: #B3261B;
+    line-height: 1.35;
+  }
+  .redline-fix {
+    font-family: "Cascadia Mono", "Noto Sans SC", monospace;
+    font-size: 12.5px;
+    color: #5E5950;
+    margin-top: 2px;
+  }
+
+  /* Bottom verification footer inside manuscript */
+  .paper-footer {
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px solid #E5DFD3;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .strat-legend {
+    font-family: "Noto Sans SC", sans-serif;
+    font-size: 13px;
+    color: #6B655B;
+    line-height: 1.5;
+  }
+  .strat-legend b {
+    color: #1A1917;
+    font-weight: 600;
+  }
+
+  /* Authentic peer-review verification ink stamp */
+  .stamp {
+    border: 2px solid #146356;
+    padding: 5px 11px;
+    transform: rotate(-2.5deg);
+    background: rgba(20, 99, 86, 0.04);
+    text-align: center;
+    flex-shrink: 0;
+  }
+  .stamp-top {
+    font-family: "Cascadia Mono", monospace;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: #146356;
+  }
+  .stamp-sub {
+    font-family: "Noto Serif SC", serif;
+    font-size: 12px;
+    font-weight: 700;
+    color: #146356;
+    margin-top: 1px;
+  }
+</style>
+</head>
+<body>
+  <div class="sheet">
+    <!-- Academic Masthead -->
+    <header class="masthead">
+      <div class="masthead-left">SCIENTIFIC LITERATURE QA · AGENT SKILL</div>
+      <div class="masthead-right">MODE 0 + 3 GATES &nbsp;|&nbsp; 8 AUDIT SCRIPTS &nbsp;|&nbsp; <strong>MIT</strong></div>
+    </header>
+
+    <!-- Main 2-Column Editorial Spread -->
+    <div class="body-grid">
+      <!-- Left: Editorial Cover Copy -->
+      <div class="title-col">
+        <div>
+          <div class="kicker">审稿级防幻觉工作流 · 学科通用</div>
+          <h1>NotebookLM<span class="accent-line">Research Workflow</span></h1>
+          <div class="deck">在文献结论写进论文之前，<br>先替你做一次审稿级核验。</div>
+          <p class="abstract">
+            面向中英文学术 PDF 精读、跨文献参数对比与 0→1 陌生领域冷启动。不把知识库当黑盒摘要器，用确定性脚本在草稿阶段拦截失真。
+          </p>
+        </div>
+
+        <div class="index-strip">
+          <div class="idx-item">
+            <div class="idx-num">I.</div>
+            <div class="idx-name">入库体检修复</div>
+            <div class="idx-cmd">check_fulltext</div>
+          </div>
+          <div class="idx-item">
+            <div class="idx-num">II.</div>
+            <div class="idx-name">一手综述隔离</div>
+            <div class="idx-cmd">-s primary_only</div>
+          </div>
+          <div class="idx-item">
+            <div class="idx-num">III.</div>
+            <div class="idx-name">输出机审溯源</div>
+            <div class="idx-cmd">verify_outputs</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right: Redlined Manuscript Specimen -->
+      <div class="manuscript-wrap">
+        <div class="paper-card">
+          <div class="paper-header">
+            <span class="paper-fig">审稿红笔批注样张 · 典型隐性失真拦截</span>
+            <span class="paper-tag">PRE-SUBMISSION GATE</span>
+          </div>
+
+          <div class="audit-row">
+            <div class="raw-cell">
+              <span class="raw-label">Source #04 · 老扫描件.pdf</span>
+              状态 <span class="strike">ready</span> · 数字 0 个
+            </div>
+            <div class="redline-note">
+              <div class="redline-title">拦截：假就绪 PDF 静默丢数字</div>
+              <div class="redline-fix">→ pdf_prepare 切页 · md2docx 重建</div>
+            </div>
+          </div>
+
+          <div class="audit-row">
+            <div class="raw-cell">
+              <span class="raw-label">Table Draft · 全库混导</span>
+              <span class="strike">Review 占表 &gt;25% 行</span>
+            </div>
+            <div class="redline-note">
+              <div class="redline-title">拦截：综述反客为主与二手伪引</div>
+              <div class="redline-fix">→ -s 剔除综述，按 4–8 篇一手重跑</div>
+            </div>
+          </div>
+
+          <div class="audit-row">
+            <div class="raw-cell">
+              <span class="raw-label">Interval &amp; Code · CSV 单元格</span>
+              区间 <span class="circled">2.543.56</span> · <span class="circled">Fig13</span>
+            </div>
+            <div class="redline-note">
+              <div class="redline-title">拦截：连字符被吞导致数值失真</div>
+              <div class="redline-fix">→ trace-claim 回溯原文字符偏移</div>
+            </div>
+          </div>
+
+          <div class="audit-row">
+            <div class="raw-cell">
+              <span class="raw-label">Metric Column · 同一列混拼</span>
+              IC50: <span class="wavy">12 μM / 450 nM</span>
+            </div>
+            <div class="redline-note">
+              <div class="redline-title">拦截：跨行量纲与统计口径冲突</div>
+              <div class="redline-fix">→ scan-csv 告警并拆列补样本量 n</div>
+            </div>
+          </div>
+
+          <div class="paper-footer">
+            <div class="strat-legend">
+              <b>三态诚实交付</b>：一手已核 / 全文纠偏 / 待回原 PDF
+            </div>
+            <div class="stamp">
+              <div class="stamp-top">PRIMARY-VERIFIED</div>
+              <div class="stamp-sub">原文偏移 · 单位已核</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
