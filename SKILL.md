@@ -1,13 +1,16 @@
 ---
 name: notebooklm-research-workflow
 description: >-
-  Scientific literature deep-reading and quality-controlled automation workflow
-  using notebooklm-py. Use when the user wants to ingest academic PDFs into
-  NotebookLM, audit parsing quality with source fulltext, repair broken or
-  scanned Chinese/multilingual PDFs into image-embedded DOCX, run rigorous
-  cross-paper comparisons with strict reviewer personas, or synthesize research
-  outputs (mind-map, data-table, report, infographic, audio, video, slide-deck).
-  Complements the base notebooklm skill with research QA and verification.
+  Scientific literature deep-reading, rapid domain onboarding, and quality-controlled
+  automation workflow using notebooklm-py. Use when the user wants to ingest academic
+  PDFs into NotebookLM, rapidly onboard onto an unfamiliar research field (mental
+  models, scholarly debates, Socratic diagnostic testing via learning-guide/quiz/flashcards),
+  audit parsing quality with source fulltext, repair broken or scanned Chinese/multilingual
+  PDFs into image-embedded DOCX, run rigorous cross-paper comparisons with strict reviewer
+  personas, or synthesize verified research outputs (mind-map, data-table, report,
+  infographic, audio, video, slide-deck, and Studio-generated interactive HTML webpages /
+  type-10 File artifacts). Complements the base notebooklm skill with
+  domain onboarding and research QA verification.
 ---
 
 # NotebookLM Research Workflow (通用科研文献精读与防幻觉工作流)
@@ -20,6 +23,18 @@ This skill encodes a discipline-agnostic, research-first workflow for scientific
 2. **Input Layer (Parsing QA)**: `pdf_prepare.py` + `check_fulltext.py` + `figure_probe.py` — never equate `status: "ready"` with valid parsing, and never assume fluent CJK/English prose preserved its embedded numbers.
 3. **Isolation Layer (Source Governance)**: Physically separate **primary empirical studies** (`primary`), **secondary reviews/meta-analyses** (`review`), and **background/control references** (`background`) using `label` / `-s` subsets. Never dump mixed primary + review sources into one `data-table` or `report`.
 4. **Output Layer (Deterministic Verification Gate)**: Run `verify_outputs.py scan-csv` + `check-coverage` + `trace-claim` + review-excluded `ask -s` audits before trusting NotebookLM-generated tables, reviews, or synthesis answers.
+
+## Mode 0: Rapid Domain Onboarding (0→1 跨领域冷启动与苏格拉底自测, Optional)
+
+Use **Mode 0** when entering an unfamiliar discipline, onboarding new students, or preparing for qualifying exams—**not** as a substitute for Steps 1–5 when extracting publication-grade numbers or writing review manuscripts.
+
+1. **Landscape Source Mix (Keep Separate from Manuscript Notebooks)**: Bundle 2–4 foundational textbooks/chapters, 5–10 high-impact surveys/seminars, and lecture/course URLs (`research discover` works well for fast gap-filling). Never mix onboarding textbooks/reviews into an active primary-study synthesis notebook.
+2. **4-Step Socratic Onboarding Loop** (see Part C of [research-prompts.md](./references/research-prompts.md)):
+   - **Mental Models & Terminology**: Ask for the field's 5 core mental models/first principles and align divergent terms instead of linear file-by-file summaries (pair with `generate mind-map`).
+   - **Controversies & Edge-Case Boundaries**: Map the top 3 competing camps, strongest empirical evidence per side, and known failure boundaries.
+   - **Feynman Bridge (On Demand)**: Translate dense formalism via cross-domain analogies while explicitly stating **where the analogy breaks down**.
+   - **Reverse Diagnostic & Socratic Debrief**: Switch chat to **Preset 6 (`Socratic Domain Tutor`)** or built-in `notebooklm configure --mode learning-guide`, or generate low-quota self-tests (`generate quiz --difficulty hard --wait` / `generate flashcards --wait`, downloadable via `--format markdown`). When the user misses a question, **never give the answer directly**—guide reasoning with source-grounded hints/counterexamples, and verify disputed/missed facts back against source passages via `source search` or `verify_outputs.py trace-claim`.
+3. **Promotion Gate (Onboarding → Paper Writing)**: Before citing any onboarding takeaway in a paper or grant, run the **Promotion Audit** prompt to separate textbook/review generalizations from primary empirical claims, then switch to **Steps 1–5** with strict primary-source isolation.
 
 ## Step 1: Data Isolation & Pre-flight Check
 
@@ -151,6 +166,11 @@ See [research-prompts.md](./references/research-prompts.md) for copy-ready promp
    - **Literature review (`generate report --format custom -s <primary_subset> --wait`)**: Avoid `artifact suggestions` (generic business templates) and exclude secondary reviews when synthesizing core empirical claims. **Cross-check**: full-library `report` drafts can synthesize fake `"二次转引"` chains (cross-paper date stitching, fabricated citations, or wrong-subject attribution), erase negative results, and inflate tentative hypotheses into settled facts; audit key claims against isolated `ask -s` + `trace-claim` before citing.
    - **Evolution & argument map (`generate mind-map`)**: Exports JSON node tree for structuring papers or talks.
    - **Presentation & outreach (`infographic`, `audio`, `video`, `slide-deck`)**: Only convert claims/numbers that already cleared Verification Gates 1–2; use `generate revise-slide` to tweak individual slides instead of regenerating the full deck.
+   - **Interactive HTML webpages (`type=10` / `File` Studio artifacts via `download_webpages.py`)**: NotebookLM Studio-generated webpages appear in `artifact list` as `type: "File"` (`ArtifactTypeCode.FILE = 10`), which `notebooklm-py 0.8.6` CLI `download` does not yet support (and its generic `AssetDownloadService` rejects `text/html` payloads). Moreover, raw `row[23]` / `row[24][2]` (`drive.google.com/viewer/upload?...`) only serves a viewer JSON wrapper, while `row[24][3]` (`contribution.usercontent.google.com/download?...&filename=...html`) holds the real HTML download URL and `row[24][5][1]` holds the generation prompt. Probe and batch-download complete HTML files + `manifest.json` via:
+     ```bash
+     python scripts/download_webpages.py -n <NOTEBOOK_ID> --list --json
+     python scripts/download_webpages.py -n <NOTEBOOK_ID> -o <OUT_DIR> [--only <ID_OR_TITLE>]
+     ```
 2. **Gate 1 — Automated output & coverage audits (`verify_outputs.py`)**:
    ```bash
    python scripts/verify_outputs.py scan-csv <table.csv> --target-focus "<TargetTerm1,TargetTerm2>" [--code-prefixes "PrefixA,PrefixB"] [--strict]

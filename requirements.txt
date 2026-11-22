@@ -2,7 +2,7 @@
 # Tested on Python 3.11.9 with:
 #   notebooklm-py==0.8.6, pymupdf==1.28.2, pymupdf4llm==1.28.2, python-docx==1.2.0
 
-# NotebookLM CLI & Python client (required by check_fulltext, export_md_figures, figure_probe, verify_outputs)
+# NotebookLM CLI & Python client (required by check_fulltext, export_md_figures, figure_probe, verify_outputs, download_webpages)
 notebooklm-py>=0.8.6
 
 # PDF inspection, page rendering, region cropping & in-place figure patching (pdf_prepare.py)

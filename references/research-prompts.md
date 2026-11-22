@@ -5,7 +5,7 @@
 
 ---
 
-## Part A: Five Pre-Built Chat Personas (`notebooklm configure --persona`)
+## Part A: Six Pre-Built Chat Personas (`notebooklm configure --persona` / `--mode`)
 
 **Important CLI rules:**
 - `configure` modifies the **cloud notebook's chat settings** (synced with the web UI's *Configure Chat → Custom* panel). It persists across new conversations (`--new`) until changed or reset.
@@ -47,6 +47,15 @@ notebooklm configure -n <NB> --persona "你是一位极其敏锐、爱挑刺的�
 ```bash
 notebooklm configure -n <NB> --persona "你是一位既懂科学严谨性、又擅长把硬核论文讲给大众和跨学科听众听的科研科普编导。规则：1.严禁堆砌晦涩缩写而不解释，遇到专业术语必须顺带用一句通俗比喻讲明白；2.所有科学数字和结论仍必须忠于上传文献并标明出处；3.用「核心悬念 → 证据链拆解 → 结论反转/亮点」的叙事结构组织回答，方便直接改写成视频口播稿。" --response-length default
 ```
+
+### Preset 6: Socratic Domain Tutor (跨领域冷启动 / 苏格拉底导师)
+*Best for Mode 0 rapid onboarding into an unfamiliar field, qualifying-exam prep, or stress-testing conceptual understanding without spoilers.*
+
+```bash
+notebooklm configure -n <NB> --persona "你是一位擅长跨学科冷启动训练的苏格拉底式科研导师。规则：1.先提炼底层思维模型、核心变量关系与学派分歧，不要逐篇流水账复述；2.用跨学科类比解释复杂概念时，必须同步指出该类比在何处会失真、并拉回原文献严格定义；3.进入自测拷问时，若用户答错或漏掉限制条件，严禁直接给出答案，而应从上传文献中给出一条线索或反例反问引导；4.所有机制与结论均须标注出处，未提及直写「未提及」。" --response-length default
+```
+
+> **Built-in alternative:** For lightweight interactive tutoring without a custom persona prompt, run `notebooklm configure -n <NB> --mode learning-guide` (or select *Learning Guide* in the Web UI's *Configure Chat*). Note `--mode` cannot be combined with `--persona` / `--response-length`.
 
 ---
 
@@ -104,4 +113,76 @@ notebooklm generate report "以学术综述体例撰写《[主题]研究特征�
 
 ```bash
 notebooklm generate mind-map -n <NB> --language zh_Hans --instructions "按研究年代与技术手段梳理认知演化：早期描述阶段→定量测试阶段→微观/原位精细阶段→保存机制与模型整合"
+```
+
+---
+
+## Part C: Rapid Domain Onboarding & Socratic Learning Chain (Mode 0 / 跨领域速通 5 步提示词)
+
+Use this sequence when entering an unfamiliar discipline (`2–4` textbooks/chapters + `5–10` core reviews/seminars + lecture URLs). In CLI, save multi-line prompts to UTF-8 `prompt.txt` and pass `notebooklm ask -n <NB> --prompt-file prompt.txt` (add `--save-as-note` to keep clickable `[N]` citations).
+
+### C1. Mental Models & Terminology Alignment (先抓领域骨架)
+
+```text
+请通读我上传的所有资料，不要按文件逐篇总结。请站在这个领域顶尖专家的视角回答：
+1. 真正理解这个领域，必须掌握的 5 个核心思维模型（Mental Models）或第一性原理是什么？
+2. 请用通俗但不失严谨的语言逐一解释每个模型，并展示这 5 个模型之间是如何互相作用、支撑整个学科框架的；
+3. 每个模型后面必须标明出自哪些上传资料；如果资料里对某个底层概念存在不同叫法，请顺便替我对齐术语。
+```
+
+### C2. Controversies & Edge-Case Failure Boundaries (摸清争议与失效边界)
+
+```text
+基于我上传的资料，请帮我划出这个领域的“争议地图”：
+1. 目前不同学者或流派之间，意见分歧最根本的 3 个问题是什么？请分别列出各方最强的核心论据和实证依据；
+2. 这个领域目前主流方法或理论在哪些“极端边界条件（Edge Cases）”下会失效或解释不了？
+3. 资料里还有哪些明确标注“尚未解决、有待后续研究”的空白地带？
+要求：严格忠于上传文本，未提及的内容直写“未提及”，严禁脑补。
+```
+
+### C3. Feynman Bridge + Analogy Breakdown Boundary (按需降维类比)
+
+```text
+我对【填入难懂的概念/模型名称】还是没完全转过弯来。假设我只具备【填入自己专业背景】的基础知识：
+1. 请先用一个我熟悉领域的具体事物或现象做类比，讲清楚它的核心直觉；
+2. 再明确指出这个类比“在什么地方会失真”（类比失效边界），把严格定义拉回到原文献的表述上；
+3. 列出理解这个概念前，我必须先搞懂的 2 个前置基础概念。
+```
+
+### C4. Reverse Diagnostic Questions & Socratic Non-Spoiler Loop (本质理解自测 + 苏格拉底拷打)
+
+Step 1 — Generate diagnostic questions (or generate low-quota self-test artifacts via CLI):
+
+```text
+请基于这些资料，为我设计 8~10 道高难度诊断题。要求：不要出单纯考背诵定义的填空题，每一道题都要能精准区分“只是背过概念的人”和“真正理解底层因果逻辑、知道条件边界的人”（包含反常案例判断、方法选型错误排查或结论推演）。先只把题目发给我，不要提前给出答案！
+```
+
+Step 2 — Run the interactive Socratic debrief loop (and verify any missed/disputed fact via `source search` or `verify_outputs.py trace-claim`):
+
+```text
+现在进入苏格拉底模拟考核模式，请严格遵守以下规则：
+1. 我们一题一题来，等我发给你我的回答后你再点评；
+2. 如果我答对了，不要简单夸我，而是顺着我的回答再抛出一个更深一层的“极端场景追问”；
+3. 如果我答错了或漏掉了关键限制条件，【绝对不要直接告诉我正确答案】，而是从上传文献里找出一个相关线索或反例反问我，引导我自己推理出正确结论；
+4. 每轮点评涉及关键结论时，必须附上对应的原文出处标号。
+```
+
+Optional CLI artifacts (`quiz` / `flashcards`, low 5h quota):
+
+```bash
+notebooklm generate quiz "聚焦核心概念边界、方法失效条件与跨文献分歧，出高区分度诊断题" -n <NB> --difficulty hard --quantity standard --wait --retry 2
+notebooklm download quiz --format markdown -n <NB> ./onboarding_quiz.md
+
+notebooklm generate flashcards "提炼核心术语、适用条件与反常边界" -n <NB> --difficulty medium --quantity standard --wait --retry 2
+notebooklm download flashcards --format markdown -n <NB> ./onboarding_flashcards.md
+```
+
+### C5. Onboarding-to-Primary Promotion Audit (从“速通理解”切换到“写论文模式”)
+
+Run before promoting any onboarding insight into a manuscript, review, or grant draft (then switch to **Steps 1–5** with strict primary-source isolation):
+
+```text
+我现在已经初步理解了这个领域的框架，准备正式进入文献综述/课题设计阶段。请帮我整理一份《待核实清单》：
+1. 把刚才回答里引用自“教科书/通俗类比/二手综述”的内容，和来自“一手实验/实证论文”的内容彻底分开；
+2. 列出刚才讨论中最关键的 5 个定量结论或核心机制，并告诉我接下来我应该重点去回看哪几篇原始论文的哪一部分来亲眼核实数据。
 ```

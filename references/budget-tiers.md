@@ -24,7 +24,7 @@ Choose the right NotebookLM command for each research task. Cost percentages fro
 | **Cross-paper data matrix** | `generate data-table -s <label_primary_IDs>` | Best for exploratory scans across 10+ sources (4–8 primary IDs/batch + `scan-csv`); for 1–8 core papers needing publication-exact tables, have local Agent read PDFs directly | 5.03% |
 | **Structured academic review** | `generate report --format custom -s <primary_IDs>` | Great skeleton; exclude secondary reviews when testing empirical claims & cross-audit via review-excluded `ask -s` + `trace-claim` | 5.57% |
 | **Summary figure** | `generate infographic` | Single visual overview for slides or outreach | 8.13% |
-| **Review cards / self-test** | `generate flashcards` / `quiz` | Useful for teaching or exam prep | 2.20% / 2.67% |
+| **Review cards / self-test** | `generate flashcards` / `quiz` | Mode 0 onboarding & concept stress-test (`--format markdown` export); verify missed items via `source search` / `trace-claim` | 2.20% / 2.67% |
 | **Group meeting slides** | `generate slide-deck` + `revise-slide` | Export PDF/PPTX; edit single slides via `revise-slide` (3.57%) | 46.60% |
 | **Audio / video briefings** | `generate audio` / `video` | Two-host podcast or explainer (`--format short` for vertical video) | 38.90% / 41.37% |
 
